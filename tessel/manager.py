@@ -6,6 +6,8 @@ import time
 import httpx
 import psutil
 
+from .downloader import file_paths, on_disk
+
 
 async def tcp_ok(host, port, timeout=1.5):
     t0 = time.perf_counter()
@@ -80,16 +82,17 @@ class Manager:
             self.model_id = cfg["default_model"]
             self.started_at = self.ready_at = time.time()
 
+    def target(self):
+        return self.model_id or self.cfg.get("target_model") or self.cfg["default_model"]
+
     def model_path(self, m):
-        return os.path.join(self.cfg["models_dir"], m["file"])
+        return file_paths(self.cfg, m)[0][1]
 
     def catalog(self):
         out = []
         for m in self.cfg["models"]:
-            path = self.model_path(m)
-            size = os.path.getsize(path) if os.path.exists(path) else 0
-            out.append({**m, "downloaded_gb": round(size / 1e9, 2),
-                        "downloaded": size >= m["size_gb"] * 1e9 * 0.995})
+            size, done = on_disk(self.cfg, m)
+            out.append({**m, "downloaded_gb": round(size / 1e9, 2), "downloaded": done})
         return out
 
     def command(self, m):
@@ -102,7 +105,7 @@ class Manager:
     async def workers_status(self):
         res = []
         n = len(self.workers)
-        layers = self.models[self.cfg["default_model"]].get("n_layers")
+        layers = self.models[self.target()].get("n_layers")
         connected = connected_ips()
 
         async def probe(w):
@@ -179,7 +182,7 @@ class Manager:
         cmd = ps[0].info["cmdline"] or []
         if "-m" in cmd:
             fn = os.path.basename(cmd[cmd.index("-m") + 1])
-            self.model_id = next((m["id"] for m in self.cfg["models"] if m["file"] == fn), None)
+            self.model_id = next((m["id"] for m in self.cfg["models"] if os.path.basename(m["files"][0]["path"]) == fn), None)
         self.state = "loading"
         self.started_at = ps[0].create_time()
         self._task = asyncio.create_task(self._watch())
