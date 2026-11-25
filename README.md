@@ -95,3 +95,9 @@ Chats are kept only in the browser tab. Settings, then Data and privacy, downloa
 ## Protection
 
 nginx limits request rate, connections per address and body size. The app limits messages per minute per address, the length of a conversation and the size of the waiting line. Only an admin token can load or stop models, change nodes or run the limit test. The nodes accept traffic only from each other and from the load balancer.
+
+## Demo
+
+![Demo](docs/images/demo.gif)
+
+Two messages sent to the Qwen3-30B-A3B cluster. The progress line shows tokens, time and speed while a reply streams, and the line under each reply shows which replica set answered.
