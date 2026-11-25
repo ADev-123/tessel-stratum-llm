@@ -42,8 +42,6 @@ cp .env.example .env
 | `TESSEL_INSTANCE_PROFILE` | instance profile for the nodes, default `LabInstanceProfile` |
 | `TESSEL_REGION` | AWS region, default `us-east-1` |
 
-`.env` is ignored by git.
-
 ### 3. Create the cluster
 
 ```
