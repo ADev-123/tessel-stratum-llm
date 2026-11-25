@@ -1,0 +1,14 @@
+[Unit]
+Description=Tessel Stratum app
+After=network.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/opt/tessel/app
+Environment=TESSEL_CONFIG=/opt/tessel/app/config.json
+ExecStart=/usr/bin/python3 -m uvicorn tessel.server:app --host 127.0.0.1 --port 8000
+KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
