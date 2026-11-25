@@ -149,6 +149,9 @@ main{display:flex;flex-direction:column;min-width:0;height:100vh;position:relati
 .setbox{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-top:10px;background:var(--panel)}
 .setbox .sh{display:flex;justify-content:space-between;font-weight:550;margin-bottom:4px}
 .kv{font-size:13px;color:var(--muted)}
+.mcard{cursor:pointer;margin-top:8px;padding:8px 12px}
+.mcard.sel{border-color:var(--accent)}
+.mcard .sh{margin-bottom:2px}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;font-variant-numeric:tabular-nums}
 td,th{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line)}
 th:first-child,td:first-child{text-align:left}
@@ -694,12 +697,32 @@ function buildTab() {
 }
 
 function buildCluster(b) {
+  updateCluster.sig = null;
   const tok = h('input', {type: 'password', placeholder: 'Admin token', value: admin.get(), oninput: e => admin.set(e.target.value), autocomplete: 'off'});
-  const msel = h('select', {id: 'cl-model'});
-  const types = h('select', {id: 'cl-type', onchange: fit});
-  const count = h('input', {type: 'number', id: 'cl-count', min: 1, max: 8, value: 4, title: 'workers per replica set', oninput: fit});
-  const rep = h('input', {type: 'number', id: 'cl-rep', min: 1, max: 4, value: 1, title: 'replica sets', oninput: fit});
-  const act = async (fn) => { try { await fn(); toast('Request sent'); } catch (e) { $('#cl-msg').textContent = e.message; } refresh(); };
+  const types = h('input', {type: 'text', id: 'cl-type', list: 'cl-types', placeholder: 'Instance type, for example r7g.xlarge', autocomplete: 'off', spellcheck: 'false', oninput: () => { checkedSpec = null; fit(); }});
+  const count = h('input', {type: 'number', id: 'cl-count', min: 1, max: 64, value: 4, title: 'workers per replica set', oninput: fit});
+  const rep = h('input', {type: 'number', id: 'cl-rep', min: 1, max: 8, value: 1, title: 'replica sets', oninput: fit});
+  const lim = h('input', {type: 'number', id: 'cl-limit', min: 2, max: 64, value: 9, title: 'most instances this cluster may run, head included', oninput: fit});
+  const act = clAct = async (fn) => { try { await fn(); toast('Request sent'); $('#cl-msg').textContent = ''; } catch (e) { $('#cl-msg').textContent = e.message; } refresh(); };
+  const checkType = async () => {
+    try {
+      const r = await fetch('/api/cluster/type?name=' + encodeURIComponent(types.value.trim()), {headers: {'X-Admin-Token': admin.get()}});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || r.statusText);
+      checkedSpec = d; $('#cl-msg').textContent = ''; fit();
+    } catch (e) { checkedSpec = null; $('#cl-msg').textContent = e.message; }
+  };
+  const autoFill = () => {
+    const c = status && status.cluster, m = status && status.models.find(x => x.id === selModel), t = specFor(types.value.trim());
+    if (!c || !m || !t) { $('#cl-msg').textContent = 'Pick a model and check the node type first'; return; }
+    const n = minWorkers(m, t);
+    if (!n) { $('#cl-msg').textContent = `${t.type} has too little memory for ${m.name}`; return; }
+    const top = Math.floor((+lim.value - c.rules.head) / n);
+    count.value = n;
+    if (top < 1) { lim.value = Math.min(c.max_instances_hard, n + c.rules.head); rep.value = 1; $('#cl-msg').textContent = `${m.name} needs ${n} workers plus the head. The limit box now shows ${lim.value}, press Save limit to keep it.`; }
+    else { rep.value = top; $('#cl-msg').textContent = ''; }
+    fit();
+  };
   b.append(h('h3', {}, 'Cluster'),
     h('div', {id: 'cl-top', class: 'kv'}),
     h('div', {id: 'cl-sets'}),
@@ -707,17 +730,22 @@ function buildCluster(b) {
     h('p', {class: 'kv', style: 'margin:0 0 8px'}, 'Chatting needs no token. Loading models, changing nodes and the limit test are admin only.'),
     tok,
     h('h4', {}, 'Model'),
-    msel,
-    h('div', {class: 'rowg', style: 'margin-top:8px'},
-      h('button', {class: 'btn primary', onclick: () => act(() => post('/api/models/load', {id: msel.value}))}, 'Load on all replica sets'),
-      h('button', {class: 'btn danger', onclick: () => act(() => post('/api/models/stop'))}, 'Stop')),
+    h('div', {class: 'kv'}, 'Pick a model. Each card shows how many nodes of the current type it needs. Models are downloaded to the head node on demand.'),
+    h('div', {id: 'cl-models'}),
+    h('div', {class: 'rowg', id: 'cl-modelact', style: 'margin-top:8px'}),
     h('h4', {}, 'Nodes'),
-    types,
+    h('datalist', {id: 'cl-types'}),
+    h('div', {class: 'rowg'}, types, h('button', {class: 'btn', onclick: checkType}, 'Check')),
+    h('div', {class: 'kv', id: 'cl-spec', style: 'margin-top:4px'}, 'Any EC2 instance type works. Check looks up its memory and CPU.'),
     h('div', {class: 'rowg', style: 'margin-top:8px'}, count, rep,
-      h('button', {class: 'btn primary', onclick: () => { const c = status && status.cluster; const same = c && types.value === c.type && +count.value === c.count;
+      h('button', {class: 'btn', onclick: autoFill, title: 'workers needed for the selected model, and as many replica sets as the limit allows'}, 'Auto-fill'),
+      h('button', {class: 'btn primary', onclick: () => { const c = status && status.cluster; const same = c && types.value.trim() === c.type && +count.value === c.count;
         if (!confirm(same ? 'This adds or removes replica sets. Existing sets keep serving. Continue?' : 'Changing the node type or workers per set stops everything, replaces all workers and reloads the model. Continue?')) return;
-        act(() => post('/api/cluster/apply', {type: types.value, count: +count.value, replicas: +rep.value || 1})); }}, 'Apply')),
-    h('div', {class: 'kv', style: 'margin-top:4px'}, 'Workers per set, replica sets'),
+        act(() => post('/api/cluster/apply', {type: types.value.trim(), count: +count.value, replicas: +rep.value || 1, model: selModel})); }}, 'Apply')),
+    h('div', {class: 'kv', style: 'margin-top:4px'}, 'Workers per set, replica sets. Auto-fill uses the selected model.'),
+    h('div', {class: 'rowg', style: 'margin-top:8px'}, lim,
+      h('button', {class: 'btn', onclick: () => act(() => post('/api/cluster/limit', {max_instances: +lim.value}))}, 'Save limit')),
+    h('div', {class: 'kv', id: 'cl-limhint', style: 'margin-top:4px'}),
     h('div', {class: 'kv', id: 'cl-fit', style: 'margin-top:6px'}),
     h('div', {class: 'rowg', style: 'margin-top:8px'}, h('button', {class: 'btn', onclick: () => act(() => post('/api/cluster/replace', {}))}, 'Replace dead nodes now')),
     h('div', {class: 'pre', id: 'cl-job'}),
@@ -729,16 +757,35 @@ function buildCluster(b) {
     h('div', {id: 'benchOut'}));
   updateCluster();
 }
-const fitCfg = () => {
-  const c = status && status.cluster;
-  const t = c && c.types.find(x => x.type === $('#cl-type').value);
-  const n = +$('#cl-count').value, r = +$('#cl-rep').value || 1;
-  if (!c || !t || !n) return '';
-  const need = c.model_gb / n + 1.3;
-  return `${t.vcpu} vCPU, ${t.mem_gib} GiB, ${n * r + 1} of ${c.max_instances} instances, about ${need.toFixed(1)} GB per node: ` +
-    (!t.ami_ok ? 'unavailable, ' + t.note : n * r + 1 > c.max_instances ? 'too many instances' : need <= t.mem_gib * 0.9 ? 'fits' : 'does not fit in memory');
+let selModel = null, checkedSpec = null, clAct = null;
+const specFor = name => { const c = status && status.cluster; return (checkedSpec && checkedSpec.type === name && checkedSpec) || (c && c.types.find(x => x.type === name)) || null; };
+const minWorkers = (m, t) => {
+  const r = status.cluster.rules, room = t.mem_gib * r.usable - r.overhead_gb;
+  if (room <= 0) return null;
+  const n = Math.max(1, Math.ceil(m.size_gb / room));
+  return n <= m.n_layers ? n : null;
 };
-function fit() { const f = $('#cl-fit'); if (f) f.textContent = fitCfg(); }
+const fitCfg = () => {
+  const c = status && status.cluster, m = status && status.models.find(x => x.id === selModel);
+  const t = c && specFor($('#cl-type').value.trim());
+  const n = +$('#cl-count').value, r = +$('#cl-rep').value || 1, lim = +$('#cl-limit').value;
+  if (!c || !m) return '';
+  if (!t) return 'Press Check to look up this instance type.';
+  const need = m.size_gb / n + c.rules.overhead_gb, total = n * r + c.rules.head, min = minWorkers(m, t);
+  let verdict = 'fits';
+  if (!c.archs.includes(t.arch)) verdict = `no ${t.arch} worker build is published`;
+  else if (!min) verdict = 'this node type has too little memory for the model';
+  else if (n > m.n_layers) verdict = `the model only has ${m.n_layers} layers`;
+  else if (total > lim) verdict = `${total} instances is over the limit of ${lim}`;
+  else if (need > t.mem_gib * c.rules.usable) verdict = `does not fit in memory, use at least ${min} workers`;
+  return `${m.name} on ${t.type} (${t.vcpu} vCPU, ${t.mem_gib} GiB): about ${need.toFixed(1)} GB per node, ${total} of ${lim} instances, needs at least ${min ?? '?'} workers per set: ${verdict}` +
+    (verdict === 'fits' && n > c.rules.slow_above ? '. Many workers in a row slow every token, bigger nodes are faster.' : '');
+};
+function fit() {
+  const f = $('#cl-fit'); if (f) f.textContent = fitCfg();
+  const s = $('#cl-spec'), t = status && specFor($('#cl-type').value.trim());
+  if (s && t) s.textContent = `${t.type}: ${t.vcpu} vCPU, ${t.mem_gib} GiB, ${t.arch}` + (checkedSpec && checkedSpec.supported === false ? ', no worker build for this CPU type' : '');
+}
 
 async function runBench() {
   const out = $('#benchOut');
@@ -769,15 +816,37 @@ function updateCluster() {
     h('div', {class: 'sh'}, h('span', {}, `Replica set ${x.id}`), h('span', {class: 'kv'}, x.state === 'loading' ? `loading ${Math.round((x.model.progress || 0) * 100)}%` : x.state + (x.active ? ', answering' : ''))),
     x.model.error ? h('div', {class: 'errtxt'}, x.model.error) : null,
     x.workers.map(nodeRow))));
-  const msel = $('#cl-model');
-  if (document.activeElement !== msel) { const cur = msel.value; msel.replaceChildren(...s.models.map(m => h('option', {value: m.id}, `${m.name} ${m.quant}, ${m.size_gb} GB, ${m.downloaded ? 'on disk' : 'downloading ' + m.downloaded_gb + ' GB'}`))); if (cur) msel.value = cur; }
-  const cl = s.cluster, ts = $('#cl-type');
-  if (cl && document.activeElement !== ts) {
-    const cur = ts.value || cl.type;
-    ts.replaceChildren(...cl.types.map(t => h('option', {value: t.type, disabled: !(t.ami_ok && cl.ami)}, `${t.type}, ${t.vcpu} vCPU, ${t.mem_gib} GiB, ${t.arch}`)));
-    if (cur) ts.value = cur;
+  const cl = s.cluster;
+  if (!selModel || !s.models.some(m => m.id === selModel)) selModel = (cl && cl.target_model) || (s.models[0] && s.models[0].id);
+  const sig = JSON.stringify([selModel, s.models.map(m => [m.id, m.downloaded_gb, m.downloaded, m.running, m.fits_now, m.download, m.plan]), cl && [cl.type, cl.max_instances]]);
+  if (updateCluster.sig !== sig) {
+    updateCluster.sig = sig;
+    $('#cl-models').replaceChildren(...s.models.map(m => {
+      let note = '';
+      if (m.plan) note = m.plan.ok ? `needs ${m.plan.workers} x ${cl.type} per set (about ${m.plan.per_node_gb} GB each), up to ${m.plan.max_replicas} set${m.plan.max_replicas > 1 ? 's' : ''} within the limit`
+        : m.plan.reason + (m.plan.recommended_limit ? `, a limit of ${m.plan.recommended_limit} would allow it` : '');
+      const dl = m.download && m.download.state === 'downloading' ? `downloading ${m.downloaded_gb} of ${m.size_gb} GB`
+        : m.downloaded ? 'on disk' : m.downloaded_gb ? `partly downloaded, ${m.downloaded_gb} of ${m.size_gb} GB` : 'not downloaded';
+      return h('div', {class: 'setbox mcard' + (m.id === selModel ? ' sel' : ''), onclick: () => { selModel = m.id; updateCluster.sig = null; updateCluster(); }},
+        h('div', {class: 'sh'}, h('span', {}, m.name), h('span', {class: 'kv'}, m.running ? 'running' : m.fits_now === false ? 'needs more nodes' : '')),
+        h('div', {class: 'kv'}, `${m.params} parameters, ${m.quant}, ${m.size_gb} GB, ${m.license}, ${dl}`),
+        note ? h('div', {class: 'kv'}, note) : null,
+        m.download && m.download.error ? h('div', {class: 'errtxt'}, m.download.error) : null);
+    }));
+    const m = s.models.find(x => x.id === selModel), busy = s.models.some(x => x.download && x.download.state === 'downloading');
+    const dling = m && m.download && m.download.state === 'downloading';
+    $('#cl-modelact').replaceChildren(
+      !m ? '' : dling ? h('button', {class: 'btn', onclick: () => clAct(() => post('/api/models/download', {id: m.id, cancel: true}))}, 'Cancel download')
+        : !m.downloaded ? h('button', {class: 'btn primary', disabled: busy, onclick: () => clAct(() => post('/api/models/download', {id: m.id}))}, m.downloaded_gb ? 'Resume download' : 'Download')
+        : h('button', {class: 'btn primary', onclick: () => clAct(() => post('/api/models/load', {id: m.id}))}, 'Load on all replica sets'),
+      h('button', {class: 'btn danger', onclick: () => clAct(() => post('/api/models/stop'))}, 'Stop'));
+    if (cl) {
+      $('#cl-types').replaceChildren(...cl.types.map(t => h('option', {value: t.type}, `${t.vcpu} vCPU, ${t.mem_gib} GiB, ${t.arch}`)));
+      $('#cl-limhint').textContent = `Most instances the cluster may run, head included. Highest allowed: ${cl.max_instances_hard}. Each model card shows the limit it needs.`;
+    }
   }
-  if (cl && !updateCluster.init) { $('#cl-count').value = cl.count; $('#cl-rep').value = cl.replicas; updateCluster.init = true; }
+  const tin = $('#cl-type');
+  if (cl && !updateCluster.init) { tin.value = cl.type || ''; $('#cl-count').value = cl.count; $('#cl-rep').value = cl.replicas; $('#cl-limit').value = cl.max_instances; updateCluster.init = true; }
   fit();
   const j = cl && cl.job;
   $('#cl-job').textContent = j && j.state !== 'idle' ? `${j.state}\n` + j.steps.slice(-6).join('\n') + (j.error ? '\n' + j.error : '') : '';
