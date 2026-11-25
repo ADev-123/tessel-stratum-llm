@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 470" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6f6b63"/></marker>
+  </defs>
+  <rect width="980" height="470" rx="14" fill="#faf9f5" stroke="#e6e2d8"/>
+
+  <rect x="24" y="190" width="104" height="52" rx="10" fill="#fff" stroke="#c9c4b8"/>
+  <text x="76" y="221" text-anchor="middle" fill="#1f1e1d">Browser</text>
+
+  <rect x="168" y="190" width="120" height="52" rx="10" fill="#fff" stroke="#c9c4b8"/>
+  <text x="228" y="213" text-anchor="middle" fill="#1f1e1d">Load balancer</text>
+  <text x="228" y="231" text-anchor="middle" fill="#6f6b63" font-size="12">port 80, 1 target</text>
+
+  <rect x="328" y="36" width="276" height="398" rx="14" fill="#f3f1ea" stroke="#c9c4b8"/>
+  <text x="466" y="62" text-anchor="middle" font-weight="600" fill="#1f1e1d">Head node</text>
+  <rect x="348" y="78" width="236" height="52" rx="9" fill="#fff" stroke="#c9c4b8"/>
+  <text x="466" y="101" text-anchor="middle" fill="#1f1e1d">nginx</text>
+  <text x="466" y="119" text-anchor="middle" fill="#6f6b63" font-size="12">rate limits, size limits, headers</text>
+  <rect x="348" y="146" width="236" height="76" rx="9" fill="#fff" stroke="#c9c4b8"/>
+  <text x="466" y="169" text-anchor="middle" fill="#1f1e1d">Tessel app</text>
+  <text x="466" y="187" text-anchor="middle" fill="#6f6b63" font-size="12">chat API, waiting line, router</text>
+  <text x="466" y="205" text-anchor="middle" fill="#6f6b63" font-size="12">cluster control, limit test, UI</text>
+  <rect x="348" y="246" width="236" height="64" rx="9" fill="#e3f6f3" stroke="#0d9488"/>
+  <text x="466" y="272" text-anchor="middle" fill="#1f1e1d">llama-server, set A</text>
+  <text x="466" y="291" text-anchor="middle" fill="#6f6b63" font-size="12">port 8080</text>
+  <rect x="348" y="330" width="236" height="64" rx="9" fill="#e6edfb" stroke="#2563eb"/>
+  <text x="466" y="356" text-anchor="middle" fill="#1f1e1d">llama-server, set B</text>
+  <text x="466" y="375" text-anchor="middle" fill="#6f6b63" font-size="12">port 8081</text>
+
+  <g fill="#fff" stroke="#0d9488">
+    <rect x="704" y="30" width="250" height="40" rx="8"/><rect x="704" y="76" width="250" height="40" rx="8"/>
+    <rect x="704" y="122" width="250" height="40" rx="8"/><rect x="704" y="168" width="250" height="40" rx="8"/>
+  </g>
+  <g fill="#fff" stroke="#2563eb">
+    <rect x="704" y="262" width="250" height="40" rx="8"/><rect x="704" y="308" width="250" height="40" rx="8"/>
+    <rect x="704" y="354" width="250" height="40" rx="8"/><rect x="704" y="400" width="250" height="40" rx="8"/>
+  </g>
+  <g fill="#1f1e1d" font-size="13" text-anchor="middle">
+    <text x="829" y="55">worker 1, layers 0 to 11</text><text x="829" y="101">worker 2, layers 12 to 23</text>
+    <text x="829" y="147">worker 3, layers 24 to 35</text><text x="829" y="193">worker 4, layers 36 to 47</text>
+    <text x="829" y="287">worker 1, layers 0 to 11</text><text x="829" y="333">worker 2, layers 12 to 23</text>
+    <text x="829" y="379">worker 3, layers 24 to 35</text><text x="829" y="425">worker 4, layers 36 to 47</text>
+  </g>
+  <text x="829" y="22" text-anchor="middle" fill="#6f6b63" font-size="12">replica set A, rpc-server on each node</text>
+  <text x="829" y="254" text-anchor="middle" fill="#6f6b63" font-size="12">replica set B, rpc-server on each node</text>
+
+  <path d="M128 216H166" stroke="#6f6b63" stroke-width="1.6" marker-end="url(#a)" fill="none"/>
+  <path d="M288 216H326" stroke="#6f6b63" stroke-width="1.6" marker-end="url(#a)" fill="none"/>
+  <path d="M466 130V144M466 222V244M466 222Q466 236 466 244" stroke="#6f6b63" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M584 278C640 278 650 100 702 100" stroke="#0d9488" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M584 362C640 362 650 330 702 330" stroke="#2563eb" stroke-width="1.6" fill="none" marker-end="url(#a)"/>
+  <path d="M584 190C660 190 640 330 702 330" stroke="#9a958b" stroke-width="1.2" stroke-dasharray="4 4" fill="none"/>
+  <text x="640" y="238" fill="#6f6b63" font-size="11" text-anchor="middle" transform="rotate(-62 640 238)">RPC, port 50052</text>
+</svg>
