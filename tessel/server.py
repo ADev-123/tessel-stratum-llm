@@ -13,7 +13,9 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from . import bench
+from . import fit as fitting
 from .cluster import Cluster
+from .downloader import Downloads
 from .manager import Manager, head_status
 
 CONFIG_PATH = os.environ.get("TESSEL_CONFIG", "/opt/tessel/app/config.json")
@@ -38,6 +40,7 @@ def make_mgr(s):
 
 mgrs = [make_mgr(s) for s in cfg["sets"]]
 cluster = Cluster(cfg, mgrs, make_mgr) if cfg.get("region") else None
+downloads = Downloads(cfg)
 queue = deque()
 stats = {"requests": 0, "tokens": 0, "errors": 0, "decode_time": 0.0, "since": time.time(), "reply_s": 20.0}
 
@@ -88,7 +91,7 @@ async def autostart():
         while True:
             try:
                 if m.state == "stopped":
-                    await m.start(cfg["default_model"])
+                    await m.start(m.target())
                 break
             except Exception:
                 await asyncio.sleep(15)
@@ -133,6 +136,8 @@ async def lifespan(app):
         m.lock = state["lock"]
     for m in mgrs:
         await m.adopt()
+    if cluster and mgrs[0].workers and mgrs[0].workers[0].get("type"):
+        await cluster.spec(mgrs[0].workers[0]["type"])
     tasks = [asyncio.create_task(monitor())]
     if not cfg.get("assume_ready") and any(m.state == "stopped" for m in mgrs):
         tasks.append(asyncio.create_task(autostart()))
@@ -173,9 +178,19 @@ class LoadBody(BaseModel):
 
 
 class ApplyBody(BaseModel):
-    type: str
+    type: str = Field(max_length=40, pattern=r"^[a-z0-9.\-]+$")
     count: int
     replicas: int = 1
+    model: Optional[str] = None
+
+
+class LimitBody(BaseModel):
+    max_instances: int
+
+
+class DownloadBody(BaseModel):
+    id: str
+    cancel: bool = False
 
 
 class ReplaceBody(BaseModel):
@@ -218,9 +233,15 @@ async def build_status():
     sets = [{"id": m.id, "state": m.state, "active": m.active, "model": m.model_status(), "workers": w} for m, w in zip(mgrs, ws)]
     agg = aggregate()
     catalog = mgrs[0].catalog()
+    shape = cluster.current_shape() if cluster else (None, 0, len(mgrs))
+    cur_spec = cluster.cached_spec(shape[0]) if cluster and shape[0] else None
+    limit = cfg["max_instances"]
     for c in catalog:
         c["running"] = any(m.model_id == c["id"] and m.state in ("loading", "ready") for m in mgrs)
-    shape = cluster.current_shape() if cluster else (None, 0, len(mgrs))
+        c["download"] = downloads.info(c["id"])
+        if cur_spec:
+            c["plan"] = fitting.plan(c, cur_spec, limit)
+            c["fits_now"] = fitting.check(c, cur_spec, shape[1], shape[2], limit) is None
     return {
         "model": agg,
         "models": catalog,
@@ -231,8 +252,11 @@ async def build_status():
                    "queue_timeout_s": cfg.get("queue_timeout_s", 180), "slots": cfg["parallel"]},
         "bench_running": state["bench"],
         "cluster": ({"job": cluster.job, "auto_replace": bool(cfg.get("auto_replace")), "types": cfg["node_types"],
-                     "type": shape[0], "count": shape[1], "replicas": shape[2], "max_instances": cfg["max_instances"],
-                     "ami": bool(cfg.get("artifact_bucket")), "model_gb": mgrs[0].models[cfg["default_model"]]["size_gb"]}
+                     "type": shape[0], "count": shape[1], "replicas": shape[2], "max_instances": limit,
+                     "max_instances_hard": cfg.get("max_instances_hard", limit), "archs": cfg.get("rpc_archs", ["arm64"]),
+                     "rules": {"usable": fitting.USABLE, "overhead_gb": fitting.OVERHEAD_GB, "head": fitting.HEAD_NODES,
+                               "slow_above": fitting.SLOW_ABOVE},
+                     "target_model": cluster.target_model()["id"]}
                     if cluster else None),
         "stats": {"requests": stats["requests"], "tokens": stats["tokens"], "errors": stats["errors"],
                   "avg_tok_s": round(stats["tokens"] / stats["decode_time"], 2) if stats["decode_time"] else None,
@@ -248,10 +272,61 @@ async def load_model(body: LoadBody, request: Request):
     try:
         for m in mgrs:
             m.precheck(body.id)
+        if cluster:
+            itype, count, reps = cluster.current_shape()
+            spec = cluster.cached_spec(itype) if itype else None
+            err = fitting.check(mgrs[0].models[body.id], spec, count, reps, cfg["max_instances"]) if spec else None
+            if err:
+                raise ValueError(err + ". Change the nodes below first.")
+            cfg["target_model"] = body.id
         for m in mgrs:
             await m.start(body.id)
     except (ValueError, FileNotFoundError, RuntimeError) as e:
         raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.post("/api/models/download")
+async def download_model(body: DownloadBody, request: Request):
+    require_admin(request)
+    m = mgrs[0].models.get(body.id)
+    if not m:
+        raise HTTPException(400, "unknown model")
+    if body.cancel:
+        downloads.cancel(body.id)
+        return {"ok": True}
+    if downloads.busy():
+        raise HTTPException(409, "another download is running")
+    try:
+        await downloads.start(m)
+    except (OSError, RuntimeError) as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.get("/api/cluster/type")
+async def node_type(name: str, request: Request):
+    require_admin(request)
+    if not cluster:
+        raise HTTPException(404, "cluster control is not enabled")
+    if len(name) > 40 or not all(ch.isalnum() or ch in ".-" for ch in name):
+        raise HTTPException(400, "not a valid instance type name")
+    spec = await cluster.spec(name)
+    if not spec:
+        raise HTTPException(404, "instance type not found in this region")
+    return {**spec, "supported": spec["arch"] in cfg.get("rpc_archs", ["arm64"])}
+
+
+@app.post("/api/cluster/limit")
+async def cluster_limit(body: LimitBody, request: Request):
+    require_admin(request)
+    if not cluster:
+        raise HTTPException(404, "cluster control is not enabled")
+    try:
+        cluster.set_limit(body.max_instances)
+    except (ValueError, OSError) as e:
+        raise HTTPException(400, str(e))
+    status_cache["data"] = None
     return {"ok": True}
 
 
@@ -271,7 +346,7 @@ async def cluster_apply(body: ApplyBody, request: Request):
     if state["bench"]:
         raise HTTPException(409, "limit test running")
     try:
-        await cluster.apply(body.type, body.count, body.replicas)
+        await cluster.apply(body.type, body.count, body.replicas, body.model)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(400, str(e))
     return {"ok": True}

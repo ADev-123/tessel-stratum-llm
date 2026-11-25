@@ -5,6 +5,7 @@ import time
 
 import boto3
 
+from . import fit as fitting
 from .manager import tcp_ok
 from .userdata import worker_userdata
 
@@ -20,6 +21,13 @@ class Cluster:
         self.ec2 = boto3.client("ec2", region_name=cfg["region"])
         self.job = {"state": "idle", "steps": [], "error": None, "started": time.time(), "kind": None}
         self.state_file = cfg["workers_file"]
+        self.limit_file = self.state_file + ".limit"
+        self.specs = {}
+        if os.path.exists(self.limit_file):
+            try:
+                cfg["max_instances"] = json.load(open(self.limit_file))["max_instances"]
+            except (OSError, ValueError, KeyError):
+                pass
         self.load_state()
 
     def load_state(self):
@@ -43,21 +51,48 @@ class Cluster:
         first = self.mgrs[0].workers
         return (first[0].get("type") if first else None), len(first), len(self.mgrs)
 
-    def fit(self, itype, count, replicas):
-        spec = next((t for t in self.cfg["node_types"] if t["type"] == itype), None)
+    def target_model(self, model_id=None):
+        return self.mgrs[0].models[model_id or self.cfg.get("target_model") or self.cfg["default_model"]]
+
+    def cached_spec(self, itype):
+        if itype in self.specs:
+            return self.specs[itype]
+        return next((t for t in self.cfg["node_types"] if t["type"] == itype), None)
+
+    async def spec(self, itype):
+        found = self.cached_spec(itype)
+        if found:
+            return found
+        try:
+            r = await asyncio.to_thread(self.ec2.describe_instance_types, InstanceTypes=[itype])
+            i = r["InstanceTypes"][0]
+        except Exception:
+            return None
+        archs = i["ProcessorInfo"]["SupportedArchitectures"]
+        arch = "arm64" if "arm64" in archs else "x86_64"
+        self.specs[itype] = {"type": itype, "arch": arch, "vcpu": i["VCpuInfo"]["DefaultVCpus"],
+                             "mem_gib": round(i["MemoryInfo"]["SizeInMiB"] / 1024, 1)}
+        return self.specs[itype]
+
+    def set_limit(self, n):
+        hard = self.cfg.get("max_instances_hard", self.cfg["max_instances"])
+        used = 1 + sum(len(m.workers) for m in self.mgrs)
+        if n < 2 or n > hard:
+            raise ValueError(f"the limit must be between 2 and {hard}")
+        if n < used:
+            raise ValueError(f"{used} instances are running now, remove some before lowering the limit to {n}")
+        self.cfg["max_instances"] = n
+        json.dump({"max_instances": n}, open(self.limit_file, "w"))
+
+    async def fit(self, itype, count, replicas, model_id=None):
+        spec = await self.spec(itype)
         if not spec:
-            return "instance type is not in the allowed list"
-        if not spec.get("ami_ok", False):
-            return "this instance type needs its own build"
+            return "instance type not found in this region"
+        if spec["arch"] not in self.cfg.get("rpc_archs", ["arm64"]):
+            return f"no {spec['arch']} worker build is published, only {', '.join(self.cfg.get('rpc_archs', ['arm64']))} is available"
         if replicas < 1 or replicas > len(SET_IDS):
             return "replicas must be between 1 and %d" % len(SET_IDS)
-        if count < 1 or count * replicas + 1 > self.cfg["max_instances"]:
-            return f"{count} workers x {replicas} sets + head exceeds the {self.cfg['max_instances']} instance limit"
-        size = self.mgrs[0].models[self.cfg["default_model"]]["size_gb"]
-        need = size / count + 1.3
-        if need > spec["mem_gib"] * 0.9:
-            return f"model needs about {need:.1f} GB per node but {itype} has {spec['mem_gib']} GiB"
-        return None
+        return fitting.check(self.target_model(model_id), spec, count, replicas, self.cfg["max_instances"])
 
     def states(self, ids):
         r = self.ec2.describe_instances(InstanceIds=ids)
@@ -130,10 +165,14 @@ class Cluster:
         log = self.cfg["sets"][0]["log_file"] if idx == 0 else f"/opt/tessel/llama-server-{sid}.log"
         return self.make_mgr({"id": sid, "port": 8080 + idx, "log_file": log, "workers": []})
 
-    async def apply(self, itype, count, replicas):
-        err = self.fit(itype, count, replicas)
+    async def apply(self, itype, count, replicas, model_id=None):
+        if model_id and model_id not in self.mgrs[0].models:
+            raise ValueError("unknown model")
+        err = await self.fit(itype, count, replicas, model_id)
         if err:
             raise ValueError(err)
+        if model_id:
+            self.cfg["target_model"] = model_id
         self.begin("apply")
         asyncio.create_task(self._apply(itype, count, replicas))
 
@@ -144,6 +183,11 @@ class Cluster:
                 await self._resize(replicas)
             else:
                 await self._rebuild(itype, count, replicas)
+            want = self.target_model()["id"]
+            for m in self.mgrs:
+                if m.model_id != want and m.state not in ("waiting", "loading"):
+                    self.log(f"set {m.id}: loading {want}")
+                    await m.start(want)
             self.finish()
         except Exception as e:
             self.fail(e)
@@ -171,7 +215,7 @@ class Cluster:
         self.save_state()
         self.log("workers ready, loading the model on each set")
         for m in self.mgrs:
-            await m.start(self.cfg["default_model"])
+            await m.start(self.target_model()["id"])
 
     async def _resize(self, replicas):
         cur = len(self.mgrs)
@@ -187,7 +231,7 @@ class Cluster:
             self.save_state()
             self.log(f"added {len(fresh)} replica set(s), loading the model")
             for m in fresh:
-                await m.start(self.cfg["default_model"])
+                await m.start(self.target_model()["id"])
         elif replicas < cur:
             drop = self.mgrs[replicas:]
             ids = []
@@ -225,7 +269,7 @@ class Cluster:
                 m.workers[:] = [by_name[w["name"]] for w in m.workers]
                 self.save_state()
                 self.log(f"set {m.id}: replacements ready, reloading the model")
-                await m.start(self.cfg["default_model"])
+                await m.start(self.target_model()["id"])
             self.finish()
         except Exception as e:
             self.fail(e)

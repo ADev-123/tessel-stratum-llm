@@ -74,7 +74,7 @@ async def step(urls, conc, duration, payload):
 
 async def run(cfg, urls, levels, duration, max_tokens):
     payload = {
-        "model": cfg["default_model"], "stream": True, "max_tokens": max_tokens, "temperature": 0.7,
+        "model": cfg.get("target_model") or cfg["default_model"], "stream": True, "max_tokens": max_tokens, "temperature": 0.7,
         "messages": [{"role": "user", "content": PROMPT}],
         "chat_template_kwargs": {"enable_thinking": False},
     }
