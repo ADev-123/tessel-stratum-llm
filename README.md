@@ -2,7 +2,7 @@
 
 Run large language models that are too big for any single machine by splitting them layer by layer across many small, fault-tolerant nodes.
 
-Each node, such as an EC2 instance, holds only a few GB of the model. The nodes are connected as a cluster, can span several AWS accounts, and keep serving requests when individual nodes fail.
+Each node, such as an EC2 instance, holds only a few GB of the model. The nodes are connected as a cluster and keep serving requests when individual nodes fail. Spanning several AWS accounts is a goal, not built yet.
 
 The goal is to let organizations run models far larger than one server's memory allows, using commodity cloud instances instead of a single large GPU machine.
 
@@ -80,13 +80,24 @@ Every reply shows the time to first token, tokens and speed, and which replica s
 
 ![Chat](docs/images/chat.jpg)
 
-### 8. Add a replica set
+### 8. Pick a model and node type
 
-Open Settings, then Cluster. Paste the admin token, set the number of replica sets and press Apply. The token is in `admin_token` in the state folder. Existing sets keep serving while the new one loads.
+Open Settings, then Cluster, and paste the admin token. The token is in `admin_token` in the state folder.
+
+- **Model:** the cards list DeepSeek-R1 distills (1.5B to 70B), Qwen3-30B-A3B, gpt-oss-120b and Qwen3-235B-A22B, from about 1 GB to about 112 GB. Select one and press Download. It is fetched to the head node and shows its progress. Set `HF_TOKEN` on the head for models that need a Hugging Face login.
+- **Node type:** type any EC2 instance type and press Check. Its memory and CPU come from EC2.
+- **Limit:** the most instances the cluster may run, head included, up to `TESSEL_HARD_MAX_INSTANCES`. Each model card shows how many nodes of the current type it needs, and Auto-fill sets the workers per set and the number of replica sets for the selected model within the limit. If the limit is too low it suggests a higher one.
+- Press Apply to change nodes, then Load.
+
+The memory estimate is the model file size split evenly across the workers, plus about 1.3 GB per node, and nodes are treated as 90% usable. It is a guide, not a guarantee.
 
 ![Cluster](docs/images/cluster.jpg)
 
-### 9. Keep or move chats
+### 9. Add a replica set
+
+In Settings, then Cluster, raise the number of replica sets and press Apply. Existing sets keep serving while the new one loads.
+
+### 10. Keep or move chats
 
 Chats are kept only in the browser tab. Settings, then Data and privacy, downloads one chat or all of them as a file and uploads them again. Nothing is stored on the server.
 
@@ -95,6 +106,25 @@ Chats are kept only in the browser tab. Settings, then Data and privacy, downloa
 ## Protection
 
 nginx limits request rate, connections per address and body size. The app limits messages per minute per address, the length of a conversation and the size of the waiting line. Only an admin token can load or stop models, change nodes or run the limit test. The nodes accept traffic only from each other and from the load balancer.
+
+## Results and status
+
+Measured on a real cluster of four 8 GiB single-CPU Graviton nodes with Qwen3-30B-A3B (Q4_K_M), one replica set:
+
+| Concurrent users | Tokens/s per user | Tokens/s total |
+|---|---|---|
+| 1 | 4.4 | 3.4 |
+| 2 | 2.7 | 5.2 |
+| 4 | 1.4 | 5.3 |
+
+First token in about 4 seconds, model load in about 4.5 minutes, a dead worker replaced in 53 seconds. A set tops out near 5 tokens/s because each node has one CPU core.
+
+What is not done or not measured:
+
+- Throughput with two replica sets answering at once was only tested with the mock server, not on real hardware.
+- In one run an automatic replacement finished but its set did not reload the model. The cause was not confirmed, and the instance limit of the sandbox is the main suspect.
+- Clusters across several AWS accounts are a goal and are not built.
+- The model catalog, free node types and adjustable limit were added after the measurements above and have not been run on real hardware yet. Only Arm (Graviton) workers have a published build.
 
 ## Demo
 
