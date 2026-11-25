@@ -1,0 +1,172 @@
+[
+ {
+  "id": "deepseek-r1-distill-qwen-1.5b",
+  "name": "DeepSeek-R1-Distill-Qwen-1.5B",
+  "family": "DeepSeek",
+  "params": "1.5B",
+  "quant": "Q4_K_M",
+  "repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+  "files": [
+   {
+    "path": "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+    "bytes": 1117320800
+   }
+  ],
+  "size_gb": 1.12,
+  "n_layers": 28,
+  "license": "mit",
+  "note": "Smallest option, good for a first test"
+ },
+ {
+  "id": "deepseek-r1-distill-qwen-7b",
+  "name": "DeepSeek-R1-Distill-Qwen-7B",
+  "family": "DeepSeek",
+  "params": "7B",
+  "quant": "Q4_K_M",
+  "repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+  "files": [
+   {
+    "path": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+    "bytes": 4683073504
+   }
+  ],
+  "size_gb": 4.68,
+  "n_layers": 28,
+  "license": "mit",
+  "note": "Reasoning model, fits one 8 GiB node"
+ },
+ {
+  "id": "deepseek-r1-distill-llama-8b",
+  "name": "DeepSeek-R1-Distill-Llama-8B",
+  "family": "DeepSeek",
+  "params": "8B",
+  "quant": "Q4_K_M",
+  "repo": "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF",
+  "files": [
+   {
+    "path": "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+    "bytes": 4920736608
+   }
+  ],
+  "size_gb": 4.92,
+  "n_layers": 32,
+  "license": "mit",
+  "note": "Reasoning model on a Llama base"
+ },
+ {
+  "id": "deepseek-r1-distill-qwen-14b",
+  "name": "DeepSeek-R1-Distill-Qwen-14B",
+  "family": "DeepSeek",
+  "params": "14B",
+  "quant": "Q4_K_M",
+  "repo": "bartowski/DeepSeek-R1-Distill-Qwen-14B-GGUF",
+  "files": [
+   {
+    "path": "DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.gguf",
+    "bytes": 8988110240
+   }
+  ],
+  "size_gb": 8.99,
+  "n_layers": 48,
+  "license": "mit",
+  "note": "Reasoning model, a good size for small clusters"
+ },
+ {
+  "id": "deepseek-r1-distill-qwen-32b",
+  "name": "DeepSeek-R1-Distill-Qwen-32B",
+  "family": "DeepSeek",
+  "params": "32B",
+  "quant": "Q4_K_M",
+  "repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF",
+  "files": [
+   {
+    "path": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+    "bytes": 19851335840
+   }
+  ],
+  "size_gb": 19.85,
+  "n_layers": 64,
+  "license": "mit",
+  "note": "Strong reasoning model"
+ },
+ {
+  "id": "deepseek-r1-distill-llama-70b",
+  "name": "DeepSeek-R1-Distill-Llama-70B",
+  "family": "DeepSeek",
+  "params": "70B",
+  "quant": "Q4_K_M",
+  "repo": "bartowski/DeepSeek-R1-Distill-Llama-70B-GGUF",
+  "files": [
+   {
+    "path": "DeepSeek-R1-Distill-Llama-70B-Q4_K_M.gguf",
+    "bytes": 42520395936
+   }
+  ],
+  "size_gb": 42.52,
+  "n_layers": 80,
+  "license": "mit",
+  "note": "Largest DeepSeek distill"
+ },
+ {
+  "id": "qwen3-30b-a3b",
+  "name": "Qwen3-30B-A3B",
+  "family": "Qwen",
+  "params": "30B (3B active)",
+  "quant": "Q4_K_M",
+  "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+  "files": [
+   {
+    "path": "Qwen3-30B-A3B-Q4_K_M.gguf",
+    "bytes": 18556685824
+   }
+  ],
+  "size_gb": 18.56,
+  "n_layers": 48,
+  "license": "apache-2.0",
+  "note": "Mixture of experts, fast for its size"
+ },
+ {
+  "id": "gpt-oss-120b",
+  "name": "gpt-oss-120b",
+  "family": "OpenAI",
+  "params": "120B (5B active)",
+  "quant": "MXFP4",
+  "repo": "ggml-org/gpt-oss-120b-GGUF",
+  "files": [
+   {
+    "path": "gpt-oss-120b-MXFP4.gguf",
+    "bytes": 63387346208
+   }
+  ],
+  "size_gb": 63.39,
+  "n_layers": 36,
+  "license": "apache-2.0",
+  "note": "Large open model, mixture of experts"
+ },
+ {
+  "id": "qwen3-235b-a22b",
+  "name": "Qwen3-235B-A22B",
+  "family": "Qwen",
+  "params": "235B (22B active)",
+  "quant": "Q3_K_M",
+  "repo": "unsloth/Qwen3-235B-A22B-GGUF",
+  "files": [
+   {
+    "path": "Q3_K_M/Qwen3-235B-A22B-Q3_K_M-00001-of-00003.gguf",
+    "bytes": 49807634784
+   },
+   {
+    "path": "Q3_K_M/Qwen3-235B-A22B-Q3_K_M-00002-of-00003.gguf",
+    "bytes": 49667089568
+   },
+   {
+    "path": "Q3_K_M/Qwen3-235B-A22B-Q3_K_M-00003-of-00003.gguf",
+    "bytes": 12972656480
+   }
+  ],
+  "size_gb": 112.45,
+  "n_layers": 94,
+  "license": "apache-2.0",
+  "note": "Biggest option, needs about 128 GB of memory in total"
+ }
+]
