@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 600" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 680" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14">
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6f6b63"/></marker>
   </defs>
-  <rect width="980" height="600" rx="14" fill="#faf9f5" stroke="#e6e2d8"/>
+  <rect width="980" height="680" rx="14" fill="#faf9f5" stroke="#e6e2d8"/>
 
   <rect x="24" y="170" width="110" height="52" rx="10" fill="#fff" stroke="#c9c4b8"/>
   <text x="79" y="201" text-anchor="middle" fill="#1f1e1d">Users</text>
@@ -12,7 +12,7 @@
   <text x="239" y="200" text-anchor="middle" fill="#6f6b63" font-size="12">AWS WAF, Shield</text>
   <text x="239" y="218" text-anchor="middle" fill="#6f6b63" font-size="12">UI from S3, TLS</text>
 
-  <rect x="344" y="24" width="612" height="380" rx="14" fill="#f3f1ea" stroke="#c9c4b8"/>
+  <rect x="344" y="24" width="612" height="460" rx="14" fill="#f3f1ea" stroke="#c9c4b8"/>
   <text x="364" y="48" font-weight="600" fill="#1f1e1d">VPC, private subnets</text>
 
   <rect x="364" y="150" width="130" height="92" rx="10" fill="#fff" stroke="#c9c4b8"/>
@@ -22,61 +22,64 @@
 
   <rect x="524" y="60" width="412" height="160" rx="12" fill="#fff" stroke="#c9c4b8" stroke-dasharray="5 4"/>
   <text x="540" y="80" font-weight="600" fill="#1f1e1d" font-size="13">Zone a</text>
-  <rect x="544" y="90" width="150" height="100" rx="9" fill="#e3f6f3" stroke="#0d9488"/>
-  <text x="619" y="122" text-anchor="middle" fill="#1f1e1d">Head, set A</text>
-  <text x="619" y="142" text-anchor="middle" fill="#6f6b63" font-size="12">queue + llama-server</text>
-  <text x="619" y="160" text-anchor="middle" fill="#6f6b63" font-size="12">80 from ALB only</text>
-  <rect x="708" y="84" width="216" height="106" rx="9" fill="none" stroke="#0d9488" stroke-dasharray="4 3"/>
+  <rect x="540" y="88" width="380" height="116" rx="10" fill="#f6fbfa" stroke="#0d9488"/>
+  <text x="556" y="106" font-weight="600" fill="#0b6b62" font-size="12">Set A, replaced as one unit</text>
+  <rect x="556" y="118" width="140" height="72" rx="9" fill="#e3f6f3" stroke="#0d9488"/>
+  <text x="626" y="148" text-anchor="middle" fill="#1f1e1d">Head</text>
+  <text x="626" y="168" text-anchor="middle" fill="#6f6b63" font-size="12">queue + llama-server</text>
   <g fill="#fff" stroke="#0d9488">
-    <rect x="716" y="92" width="96" height="40" rx="7"/><rect x="820" y="92" width="96" height="40" rx="7"/>
-    <rect x="716" y="142" width="96" height="40" rx="7"/><rect x="820" y="142" width="96" height="40" rx="7"/>
+    <rect x="716" y="118" width="92" height="72" rx="8"/><rect x="818" y="118" width="92" height="72" rx="8"/>
   </g>
-  <g fill="#1f1e1d" font-size="13" text-anchor="middle">
-    <text x="764" y="117">worker 1</text><text x="868" y="117">worker 2</text>
-    <text x="764" y="167">worker 3</text><text x="868" y="167">worker 4</text>
+  <g text-anchor="middle">
+    <text x="762" y="148" fill="#1f1e1d">worker 1</text><text x="864" y="148" fill="#1f1e1d">worker 2</text>
+    <text x="762" y="168" fill="#6f6b63" font-size="12">large node</text><text x="864" y="168" fill="#6f6b63" font-size="12">large node</text>
   </g>
-  <text x="730" y="208" text-anchor="middle" fill="#6f6b63" font-size="12">one placement group, port 50052 from head only</text>
 
   <rect x="524" y="232" width="412" height="160" rx="12" fill="#fff" stroke="#c9c4b8" stroke-dasharray="5 4"/>
   <text x="540" y="252" font-weight="600" fill="#1f1e1d" font-size="13">Zone b</text>
-  <rect x="544" y="262" width="150" height="100" rx="9" fill="#e3f6f3" stroke="#0d9488"/>
-  <text x="619" y="294" text-anchor="middle" fill="#1f1e1d">Head, set B</text>
-  <text x="619" y="314" text-anchor="middle" fill="#6f6b63" font-size="12">queue + llama-server</text>
-  <text x="619" y="332" text-anchor="middle" fill="#6f6b63" font-size="12">80 from ALB only</text>
-  <rect x="708" y="256" width="216" height="106" rx="9" fill="none" stroke="#0d9488" stroke-dasharray="4 3"/>
+  <rect x="540" y="260" width="380" height="116" rx="10" fill="#f6fbfa" stroke="#0d9488"/>
+  <text x="556" y="278" font-weight="600" fill="#0b6b62" font-size="12">Set B, replaced as one unit</text>
+  <rect x="556" y="290" width="140" height="72" rx="9" fill="#e3f6f3" stroke="#0d9488"/>
+  <text x="626" y="320" text-anchor="middle" fill="#1f1e1d">Head</text>
+  <text x="626" y="340" text-anchor="middle" fill="#6f6b63" font-size="12">queue + llama-server</text>
   <g fill="#fff" stroke="#0d9488">
-    <rect x="716" y="264" width="96" height="40" rx="7"/><rect x="820" y="264" width="96" height="40" rx="7"/>
-    <rect x="716" y="314" width="96" height="40" rx="7"/><rect x="820" y="314" width="96" height="40" rx="7"/>
+    <rect x="716" y="290" width="92" height="72" rx="8"/><rect x="818" y="290" width="92" height="72" rx="8"/>
   </g>
-  <g fill="#1f1e1d" font-size="13" text-anchor="middle">
-    <text x="764" y="289">worker 1</text><text x="868" y="289">worker 2</text>
-    <text x="764" y="339">worker 3</text><text x="868" y="339">worker 4</text>
+  <g text-anchor="middle">
+    <text x="762" y="320" fill="#1f1e1d">worker 1</text><text x="864" y="320" fill="#1f1e1d">worker 2</text>
+    <text x="762" y="340" fill="#6f6b63" font-size="12">large node</text><text x="864" y="340" fill="#6f6b63" font-size="12">large node</text>
   </g>
-  <text x="730" y="380" text-anchor="middle" fill="#6f6b63" font-size="12">one placement group, port 50052 from head only</text>
+
+  <rect x="524" y="404" width="412" height="64" rx="10" fill="#fff" stroke="#0d9488" stroke-dasharray="4 3"/>
+  <text x="730" y="428" text-anchor="middle" fill="#1f1e1d">Warm pool</text>
+  <text x="730" y="448" text-anchor="middle" fill="#6f6b63" font-size="12">stopped spare sets per zone, model on disk, start in seconds</text>
 
   <g stroke="#6f6b63" stroke-width="1.5" fill="none" marker-end="url(#a)">
     <path d="M134 196H160"/>
     <path d="M314 196H360"/>
-    <path d="M494 180H519V140H540"/>
-    <path d="M494 212H519V312H540"/>
-    <path d="M694 137H704"/>
-    <path d="M694 309H704"/>
+    <path d="M494 180H519V154H552"/>
+    <path d="M494 212H519V326H552"/>
+    <path d="M696 154H712"/>
+    <path d="M696 326H712"/>
   </g>
 
-  <rect x="24" y="430" width="932" height="150" rx="14" fill="#f3f1ea" stroke="#c9c4b8"/>
-  <text x="44" y="456" font-weight="600" fill="#1f1e1d">Managed services, reached through VPC endpoints</text>
-  <path d="M650 404V426" stroke="#6f6b63" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#a)"/>
+  <rect x="24" y="510" width="932" height="150" rx="14" fill="#f3f1ea" stroke="#c9c4b8"/>
+  <text x="44" y="536" font-weight="600" fill="#1f1e1d">Managed services, reached through VPC endpoints</text>
+  <path d="M650 484V506" stroke="#6f6b63" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#a)"/>
   <g fill="#fff" stroke="#c9c4b8">
-    <rect x="40" y="474" width="140" height="80" rx="9"/><rect x="192" y="474" width="140" height="80" rx="9"/>
-    <rect x="344" y="474" width="140" height="80" rx="9"/><rect x="496" y="474" width="140" height="80" rx="9"/>
-    <rect x="648" y="474" width="140" height="80" rx="9"/><rect x="800" y="474" width="140" height="80" rx="9"/>
+    <rect x="34" y="554" width="120" height="80" rx="9"/><rect x="166" y="554" width="120" height="80" rx="9"/>
+    <rect x="298" y="554" width="120" height="80" rx="9"/><rect x="430" y="554" width="120" height="80" rx="9"/>
+    <rect x="562" y="554" width="120" height="80" rx="9"/><rect x="694" y="554" width="120" height="80" rx="9"/>
+    <rect x="826" y="554" width="120" height="80" rx="9"/>
   </g>
   <g text-anchor="middle" fill="#1f1e1d">
-    <text x="110" y="508">S3</text><text x="262" y="508">DynamoDB</text><text x="414" y="508">Step Functions</text>
-    <text x="566" y="508">CloudWatch</text><text x="718" y="508">Cognito + Lambda</text><text x="870" y="508">CloudFormation</text>
+    <text x="94" y="588">S3</text><text x="226" y="588">EBS snapshots</text><text x="358" y="588">DynamoDB</text>
+    <text x="490" y="588">Step Functions</text><text x="622" y="588">CloudWatch</text><text x="754" y="588">Cognito</text>
+    <text x="886" y="588">CloudFormation</text>
   </g>
   <g text-anchor="middle" fill="#6f6b63" font-size="12">
-    <text x="110" y="528">UI, models, binaries</text><text x="262" y="528">state, limits</text><text x="414" y="528">scale and repair</text>
-    <text x="566" y="528">alarms, EventBridge</text><text x="718" y="528">admin API</text><text x="870" y="528">whole stack as code</text>
+    <text x="94" y="608">UI, binaries</text><text x="226" y="608">models on disk</text><text x="358" y="608">state, limits</text>
+    <text x="490" y="608">replace whole sets</text><text x="622" y="608">alarms, events</text><text x="754" y="608">admin login</text>
+    <text x="886" y="608">stack as code</text>
   </g>
 </svg>
